@@ -3,15 +3,11 @@ logs
 *.log
 npm-debug.log*
 
-# Dependency directories (The heavy build modules)
+# Dependencies
 node_modules/
-jspm_packages/
 
 # Production build outputs
 dist/
-dist-ssr/
-out/
-build/
 
 # IDEs and editors
 .idea/
