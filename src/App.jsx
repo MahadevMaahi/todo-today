@@ -1,269 +1,228 @@
-import { useId, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import SidePanel from './components/SidePanel'
-import SloganBar from './components/SloganBar'
-import TodoInput from './components/TodoInput'
-import TodoList from './components/TodoList'
+import AppNav from './components/AppNav'
+import CreateTaskModal from './components/CreateTaskModal'
+import DaySprintGuide from './components/DaySprintGuide'
+import Dialog from './components/Dialog'
+import KanbanBoard from './components/KanbanBoard'
+import SiteFooter from './components/SiteFooter'
+import TaskDetailDialog from './components/TaskDetailDialog'
+import Toast from './components/Toast'
+import { nextTicketNumber } from './todos/model'
+import { useTodos } from './todos/useTodos'
+import { applyTheme } from './theme'
 
-const DEFAULT_SLOGAN = 'Act Now, Simplify Life.☕'
+const GUIDE_VISIBLE_KEY = 'todo-today.guideVisible'
 
-function createId() {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID()
+function readGuideVisible() {
+  try {
+    const stored = sessionStorage.getItem(GUIDE_VISIBLE_KEY)
+    if (stored === null) return true
+    return stored === '1'
+  } catch {
+    return true
   }
-  return `todo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
-function filterTodos(todos, filter) {
-  if (filter === 'active') return todos.filter((t) => !t.completed)
-  if (filter === 'completed') return todos.filter((t) => t.completed)
-  return todos
+function writeGuideVisible(visible) {
+  try {
+    sessionStorage.setItem(GUIDE_VISIBLE_KEY, visible ? '1' : '0')
+  } catch {
+    // Ignore quota / private-mode failures.
+  }
 }
 
-function normalizeImported(raw) {
-  const list = Array.isArray(raw)
-    ? raw
-    : Array.isArray(raw?.todos)
-      ? raw.todos
-      : null
-
-  if (!list) return null
-
-  return list
-    .map((item) => {
-      if (typeof item === 'string') {
-        const title = item.trim()
-        if (!title) return null
-        return { id: createId(), title, completed: false }
-      }
-      if (item && typeof item === 'object') {
-        const title = String(item.title ?? item.text ?? '').trim()
-        if (!title) return null
-        return {
-          id: createId(),
-          title,
-          completed: Boolean(item.completed),
-        }
-      }
-      return null
-    })
-    .filter(Boolean)
+function moveFailureMessage(result) {
+  if (!result || result.ok) return null
+  if (result.reason === 'children-unfinished') {
+    const names = result.openChildTitles?.join(', ') || 'open subtasks'
+    return `Finish the open subtasks first: ${names}`
+  }
+  if (result.reason === 'task-not-found') return 'That task is no longer available.'
+  if (result.reason === 'status-invalid') return 'That status is not valid.'
+  return 'Couldn’t move that task.'
 }
 
-function exportFilename() {
-  const date = new Date().toISOString().replace(/-|:|\.\d+/g, '')
-  return `todos-${date.slice(0, 8)}-${date.slice(9, 15)}.json`
-}
+export default function App() {
+  const [themeMode, setThemeMode] = useState('system')
+  const [toast, setToast] = useState(null)
+  const [dialog, setDialog] = useState(null)
+  const [createTicket, setCreateTicket] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
+  const [guideVisible, setGuideVisible] = useState(readGuideVisible)
+  const toastTimer = useRef(null)
 
-function App() {
-  const [todos, setTodos] = useState([])
-  const [draft, setDraft] = useState('')
-  const [slogan, setSlogan] = useState(DEFAULT_SLOGAN)
-  const [filter, setFilter] = useState('all')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [aboutOpen, setAboutOpen] = useState(false)
-  const aboutId = useId()
-
-  const visibleTodos = filterTodos(todos, filter)
-  const remaining = todos.filter((t) => !t.completed).length
-  const showEmptyTips = visibleTodos.length === 0
-
-  function addTodo(rawTitle) {
-    const title = String(rawTitle ?? draft).trim()
-    if (!title) return
-    setTodos((prev) => [
-      { id: createId(), title, completed: false },
-      ...prev,
-    ])
-    setDraft('')
+  function setGuideOpen(visible) {
+    setGuideVisible(visible)
+    writeGuideVisible(visible)
   }
 
-  function toggleTodo(id) {
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t)),
-    )
+  const {
+    todos,
+    storageError,
+    clearStorageError,
+    createTask,
+    moveTask,
+    updateTask,
+    deleteTask,
+  } = useTodos()
+
+  useEffect(() => {
+    applyTheme(themeMode)
+  }, [themeMode])
+
+  useEffect(() => {
+    if (themeMode !== 'system' || typeof window === 'undefined') return undefined
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => applyTheme('system')
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [themeMode])
+
+  useEffect(() => {
+    if (!storageError) return
+    showToast(storageError, 'error')
+    clearStorageError()
+  }, [storageError, clearStorageError])
+
+  const selectedTask = selectedId
+    ? todos.find((t) => t.id === selectedId) ?? null
+    : null
+
+  function showToast(message, variant = 'info') {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ message, variant })
+    toastTimer.current = setTimeout(() => setToast(null), 4000)
   }
 
-  function deleteTodo(id) {
-    setTodos((prev) => prev.filter((t) => t.id !== id))
+  function closeDialog() {
+    setDialog(null)
   }
 
-  function renameTodo(id, title) {
-    if (!title) {
-      deleteTodo(id)
-      return
+  function confirmDialog() {
+    if (!dialog) return
+    if (dialog.type === 'delete') {
+      deleteTask(dialog.taskId)
+      setSelectedId(null)
+      showToast('Deleted task.')
     }
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, title } : t)),
-    )
+    setDialog(null)
   }
 
-  function reorderVisible(fromIndex, toIndex) {
-    setTodos((prev) => {
-      const visible = filterTodos(prev, filter)
-      const fromTodo = visible[fromIndex]
-      const toTodo = visible[toIndex]
-      if (!fromTodo || !toTodo) return prev
-
-      const next = [...prev]
-      const fromFull = next.findIndex((t) => t.id === fromTodo.id)
-      const toFull = next.findIndex((t) => t.id === toTodo.id)
-      if (fromFull < 0 || toFull < 0 || fromFull === toFull) return prev
-
-      const [moved] = next.splice(fromFull, 1)
-      next.splice(toFull, 0, moved)
-      return next
-    })
+  function handleMove(id, status) {
+    const result = moveTask(id, status)
+    const message = moveFailureMessage(result)
+    if (message) showToast(message, 'error')
+    return result
   }
 
-  function markAllDone() {
-    setTodos((prev) => prev.map((t) => ({ ...t, completed: true })))
-  }
-
-  function finishAll() {
-    markAllDone()
-  }
-
-  function clearAll() {
-    if (todos.length === 0) return
-    if (window.confirm('Confirm to clear all todo items?')) {
-      setTodos([])
-    }
-  }
-
-  function exportData() {
-    const payload = JSON.stringify(todos, null, 2)
-    const blob = new Blob([payload], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = exportFilename()
-    document.body.appendChild(anchor)
-    anchor.click()
-    document.body.removeChild(anchor)
-    URL.revokeObjectURL(url)
-  }
-
-  async function importData(file) {
-    try {
-      const text = await file.text()
-      const parsed = JSON.parse(text.trim())
-      const items = normalizeImported(parsed)
-      if (!items || items.length === 0) {
-        window.alert('No valid todo items found in that file.')
-        return
-      }
-      setTodos((prev) => [...items, ...prev])
-    } catch {
-      window.alert('Could not import file. Use a JSON array of todos.')
-    }
-  }
-
-  function saveSlogan(next) {
-    setSlogan(next || DEFAULT_SLOGAN)
+  function handleCreate(input) {
+    const result = createTask(input)
+    if (result.ok) showToast(`Created ${result.task?.ticketNumber ?? 'task'}.`)
+    return result
   }
 
   return (
-    <>
-      <div className="bg-pattern" aria-hidden="true" />
-
-      <nav className="nav">
-        <a
-          className="social-link"
-          href="https://github.com/ricocc/uiineed-todo-list"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="GitHub"
-        >
-          <svg
-            className="ic-social"
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            aria-hidden="true"
-          >
-            <path
-              fill="currentColor"
-              d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1-.7.1-.7.1-.7 1.1.1 1.7 1.2 1.7 1.2 1 .1.8 1.6 2.8 1.1.1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.9 1.2 3.2 0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"
+    <div className="app-shell">
+      <div className="app-main">
+        <div className="app-column">
+          <div className="app-column-body">
+            <AppNav
+              themeMode={themeMode}
+              onThemeChange={setThemeMode}
+              onCreate={() => setCreateTicket(nextTicketNumber(todos))}
+              guideVisible={guideVisible}
+              onShowGuide={() => setGuideOpen(true)}
+              onAbout={() =>
+                setDialog({
+                  type: 'about',
+                  title: 'About TODO BOARD',
+                  body: 'A Kanban board for today’s work. Tasks are kept in this browser tab so a refresh keeps your board. Closing the tab clears the session for a clean start next time. Open-source and free to use under the MIT License.',
+                })
+              }
             />
-          </svg>
-        </a>
-        <button
-          type="button"
-          className="about-btn"
-          aria-expanded={aboutOpen}
-          aria-controls={aboutId}
-          onClick={() => setAboutOpen((v) => !v)}
-        >
-          About
-        </button>
-        {aboutOpen ? (
-          <div id={aboutId} className="about-panel" role="dialog">
-            <p>
-              Minimalist session-only todo list. Nothing is saved when you
-              refresh or close this tab.
-            </p>
-            <button type="button" onClick={() => setAboutOpen(false)}>
-              Close
-            </button>
+
+            <KanbanBoard
+              tasks={todos}
+              onOpenTask={setSelectedId}
+              onMove={handleMove}
+            />
+
+            {guideVisible ? (
+              <DaySprintGuide onDismiss={() => setGuideOpen(false)} />
+            ) : null}
           </div>
-        ) : null}
-      </nav>
 
-      <div className="todo-wrapper">
-        <div className="todo-app">
-          <header className="container header">
-            <h1 className="title" aria-label="TODO">
-              <span className="title-text">TODO</span>
-              <span className="ani-vector" aria-hidden="true">
-                <span />
-                <span />
-              </span>
-            </h1>
-            <TodoInput value={draft} onChange={setDraft} onSubmit={addTodo} />
-          </header>
-
-          <main className="container main">
-            <div className="todo-list-box">
-              <SloganBar
-                slogan={slogan}
-                onSloganChange={saveSlogan}
-                onMarkAllDone={markAllDone}
-              />
-
-              <TodoList
-                todos={visibleTodos}
-                showEmptyTips={showEmptyTips}
-                onToggle={toggleTodo}
-                onDelete={deleteTodo}
-                onRename={renameTodo}
-                onReorder={reorderVisible}
-              />
-
-              <div className="bar-message bar-bottom">
-                <div className="bar-message-text">
-                  <span>
-                    {remaining} item{remaining === 1 ? '' : 's'} remaining
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <SidePanel
-              open={sidebarOpen}
-              onToggle={() => setSidebarOpen((v) => !v)}
-              filter={filter}
-              onFilterChange={setFilter}
-              onFinishAll={finishAll}
-              onClearAll={clearAll}
-              onExport={exportData}
-              onImport={importData}
-            />
-          </main>
+          <SiteFooter />
         </div>
       </div>
-    </>
+
+      <CreateTaskModal
+        open={Boolean(createTicket)}
+        tasks={todos}
+        ticketNumber={createTicket}
+        onClose={() => setCreateTicket(null)}
+        onCreate={handleCreate}
+      />
+
+      <TaskDetailDialog
+        open={Boolean(selectedTask)}
+        task={selectedTask}
+        tasks={todos}
+        onClose={() => setSelectedId(null)}
+        onUpdate={updateTask}
+        onMove={handleMove}
+        onRequestDelete={(taskId) =>
+          setDialog({
+            type: 'delete',
+            title: 'Delete this task?',
+            body: 'Subtasks will be kept and become top-level. Linked references to this task will be removed.',
+            taskId,
+          })
+        }
+      />
+
+      <Dialog
+        open={Boolean(dialog)}
+        title={dialog?.title ?? ''}
+        onClose={closeDialog}
+        initialFocus="cancel"
+        actions={
+          dialog?.type === 'about' ? (
+            <button
+              type="button"
+              className="btn btn-primary"
+              data-focus="cancel"
+              onClick={closeDialog}
+            >
+              Close
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                data-focus="cancel"
+                onClick={closeDialog}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                data-focus="confirm"
+                onClick={confirmDialog}
+              >
+                Delete
+              </button>
+            </>
+          )
+        }
+      >
+        {dialog?.body}
+      </Dialog>
+
+      <Toast message={toast?.message} variant={toast?.variant} />
+    </div>
   )
 }
-
-export default App
