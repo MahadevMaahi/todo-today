@@ -1,15 +1,19 @@
 const PROFILE_LINKS = [
   {
     label: 'GitHub',
-    href: 'https://github.com/your-username',
+    href: 'https://github.com/MahadevMaahi',
   },
   {
     label: 'Portfolio',
-    href: 'https://your-portfolio.example.com',
+    href: 'https://mahadevmaahi.github.io/portfolio/',
   },
   {
     label: 'LinkedIn',
-    href: 'https://www.linkedin.com/in/your-profile',
+    href: 'https://in.linkedin.com/in/badini-sai-mahadev',
+  },
+  {
+    label: 'LeetCode',
+    href: 'https://leetcode.com/u/mahadevvone/',
   },
 ]
 

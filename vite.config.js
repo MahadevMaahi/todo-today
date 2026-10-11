@@ -3,8 +3,10 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/todo-today/',
   plugins: [react()],
   test: {
     environment: 'node',
   },
 })
+

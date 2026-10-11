@@ -2,6 +2,8 @@
 
 A calm Kanban board for today’s work, built with **React** and **Vite**.
 
+👉 **Live Demo:** [https://mahadevmaahi.github.io/todo-today/](https://mahadevmaahi.github.io/todo-today/)
+
 ---
 
 ## Philosophy
@@ -58,7 +60,9 @@ A calm Kanban board for today’s work, built with **React** and **Vite**.
 
 ## Deployment
 
-The app is a static Vite build with no backend. Deploy the `dist/` folder to any static host.
+Hosted on **GitHub Pages** via `.github/workflows/deploy.yml` (builds on push to `main`).
+
+Vite `base` is `/todo-today/` so assets resolve under the project Pages URL. To enable Pages in the repo: **Settings → Pages → Source → GitHub Actions**.
 
 ## License
 
