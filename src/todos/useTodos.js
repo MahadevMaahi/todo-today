@@ -3,6 +3,7 @@ import {
   createTask as createTaskModel,
   deleteTask as deleteTaskModel,
   moveTask as moveTaskModel,
+  normalizeImported,
   updateTask as updateTaskModel,
 } from './model.js'
 import { loadTasks, saveTasks } from './storage.js'
@@ -11,6 +12,8 @@ export function useTodos() {
   const [todos, setTodos] = useState(() => loadTasks())
   const [storageError, setStorageError] = useState(null)
   const skipNextSave = useRef(true)
+  // Single-level undo: stores the tasks array before the last mutation.
+  const previousRef = useRef(null)
   const clearStorageError = useCallback(() => {
     setStorageError(null)
   }, [])
@@ -33,6 +36,7 @@ export function useTodos() {
   function createTask(input) {
     const result = createTaskModel(todos, input)
     if (result.ok) {
+      previousRef.current = todos
       setTodos(result.tasks)
     }
     return result
@@ -46,6 +50,7 @@ export function useTodos() {
     let result
     setTodos((prev) => {
       result = moveTaskModel(prev, id, status)
+      if (result.ok) previousRef.current = prev
       return result.ok ? result.tasks : prev
     })
     return result
@@ -59,6 +64,7 @@ export function useTodos() {
     let result
     setTodos((prev) => {
       result = updateTaskModel(prev, id, patch)
+      if (result.ok) previousRef.current = prev
       return result.ok ? result.tasks : prev
     })
     return result
@@ -71,9 +77,34 @@ export function useTodos() {
     let result
     setTodos((prev) => {
       result = deleteTaskModel(prev, id)
+      if (result.ok) previousRef.current = prev
       return result.ok ? result.tasks : prev
     })
     return result
+  }
+
+  /**
+   * Import tasks from raw JSON (replaces current board).
+   * @param {unknown} raw
+   * @returns {{ ok: boolean, count?: number, reason?: string }}
+   */
+  function importTasks(raw) {
+    const parsed = normalizeImported(raw, { keepIds: true })
+    if (!parsed) return { ok: false, reason: 'parse-failed' }
+    previousRef.current = todos
+    setTodos(parsed)
+    return { ok: true, count: parsed.length }
+  }
+
+  /**
+   * Undo the last mutation (single-level).
+   * @returns {{ ok: boolean }}
+   */
+  function undoLast() {
+    if (previousRef.current === null) return { ok: false }
+    setTodos(previousRef.current)
+    previousRef.current = null
+    return { ok: true }
   }
 
   return {
@@ -84,5 +115,8 @@ export function useTodos() {
     moveTask,
     updateTask,
     deleteTask,
+    importTasks,
+    undoLast,
+    canUndo: previousRef.current !== null,
   }
 }

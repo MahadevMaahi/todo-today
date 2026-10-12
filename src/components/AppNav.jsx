@@ -16,6 +16,8 @@ export default function AppNav({
   onThemeChange,
   onAbout,
   onCreate,
+  onExport,
+  onImport,
   guideVisible,
   onShowGuide,
 }) {
@@ -62,6 +64,23 @@ export default function AppNav({
               </button>
             ))}
           </div>
+          <MenuSeparator />
+          <MenuItem
+            onClick={() => {
+              closeMenu()
+              onExport()
+            }}
+          >
+            Export tasks as JSON
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              closeMenu()
+              onImport()
+            }}
+          >
+            Import tasks
+          </MenuItem>
           <MenuSeparator />
           {!guideVisible ? (
             <MenuItem
