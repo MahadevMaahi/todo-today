@@ -10,8 +10,7 @@ export default function TaskCard({
   tasks,
   onOpen,
   onMove,
-  onDragStart,
-  onDragEnd,
+  onCardPointerDown,
 }) {
   const parent = task.parentTaskId
     ? tasks.find((t) => t.id === task.parentTaskId)
@@ -61,13 +60,7 @@ export default function TaskCard({
       className="task-card"
       data-priority={task.priority}
       tabIndex={0}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData('text/plain', task.id)
-        e.dataTransfer.effectAllowed = 'move'
-        onDragStart?.(task.id)
-      }}
-      onDragEnd={() => onDragEnd?.()}
+      onPointerDown={(e) => onCardPointerDown?.(task.id, e)}
       onKeyDown={handleKeyDown}
       aria-label={`${task.ticketNumber} ${task.title}, ${priorityLabel}, ${statusLabel}`}
       aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"

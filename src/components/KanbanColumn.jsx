@@ -11,11 +11,7 @@ export default function KanbanColumn({
   onOpenTask,
   onMove,
   onAddTask,
-  onDragStart,
-  onDragEnd,
-  onDragOverColumn,
-  onDragLeaveColumn,
-  onDropColumn,
+  onCardPointerDown,
 }) {
   const label = STATUS_LABELS[status]
   const totalEffort = tasks.reduce((s, t) => s + (t.effort ?? 0), 0)
@@ -24,20 +20,8 @@ export default function KanbanColumn({
   return (
     <section
       className={`kanban-column status-${status}${isDropTarget ? ' is-drop-target' : ''}`}
+      data-status={status}
       aria-label={`${label} column`}
-      onDragOver={(e) => {
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        onDragOverColumn?.(status)
-      }}
-      onDragLeave={() => onDragLeaveColumn?.(status)}
-      onDrop={(e) => {
-        e.preventDefault()
-        const id =
-          e.dataTransfer.getData('text/plain') ||
-          e.dataTransfer.getData('application/x-task-id')
-        onDropColumn?.(status, id)
-      }}
     >
       <header className="kanban-column-header">
         <h2 className="kanban-column-title">{label}</h2>
@@ -80,8 +64,7 @@ export default function KanbanColumn({
               tasks={allTasks}
               onOpen={onOpenTask}
               onMove={onMove}
-              onDragStart={onDragStart}
-              onDragEnd={onDragEnd}
+              onCardPointerDown={onCardPointerDown}
             />
           ))
         )}
