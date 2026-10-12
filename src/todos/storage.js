@@ -49,3 +49,25 @@ export function saveTasks(tasks, storage = defaultStorage()) {
     return { ok: false }
   }
 }
+
+/**
+ * Trigger a browser download of all tasks as a dated JSON file.
+ * The exported shape is { exportedAt, tasks } which normalizeImported already accepts.
+ * @param {import('./model.js').Task[]} tasks
+ */
+export function exportTasks(tasks) {
+  const payload = JSON.stringify(
+    { exportedAt: new Date().toISOString(), tasks },
+    null,
+    2,
+  )
+  const blob = new Blob([payload], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `todo-today-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
