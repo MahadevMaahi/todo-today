@@ -346,26 +346,7 @@
   background: transparent;
 }
 
-.task-card-move select {
-  width: 100%;
-  min-height: 32px;
-  padding: 4px 28px 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-muted);
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' stroke='%235f5c56' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-}
-
-.task-card-move select:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
+/* .task-card-move select removed in Phase 3 — replaced by .task-card-actions arrow buttons */
 
 /* —— Forms —— */
 .task-form {
@@ -1307,4 +1288,40 @@
   border-color: var(--primary);
   color: var(--primary);
   background: var(--accent-soft);
+}
+
+/* —— Guide keyboard shortcuts section (Phase 3) —— */
+.guide-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-shortcuts-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--font-size-meta);
+}
+
+.guide-shortcuts-list kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface-elevated);
+  color: var(--text);
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.guide-shortcuts-list span {
+  color: var(--text-muted);
 }
