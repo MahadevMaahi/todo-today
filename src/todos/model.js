@@ -183,6 +183,21 @@ export function canFinish(tasks, id) {
   return childrenOf(tasks, id).every((child) => child.status === 'finished')
 }
 
+/** @type {Record<Priority, number>} */
+const PRIORITY_ORDER = { p0: 0, p1: 1, p2: 2, p3: 3 }
+
+/**
+ * Return a new array sorted by priority (P0 first) within the same order.
+ * Does not mutate the input.
+ * @param {Task[]} tasks
+ * @returns {Task[]}
+ */
+export function sortByPriority(tasks) {
+  return [...tasks].sort(
+    (a, b) => (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99),
+  )
+}
+
 /**
  * @param {Task[]} tasks
  * @returns {Record<Status, Task[]>}

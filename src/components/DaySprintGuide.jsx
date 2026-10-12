@@ -106,6 +106,30 @@ export default function DaySprintGuide({ onDismiss }) {
           <li>Finish children before parents, then close the day in Finished.</li>
         </ol>
       </section>
+
+      <section className="guide-section" aria-labelledby="guide-shortcuts">
+        <h3 id="guide-shortcuts" className="guide-subtitle">
+          Keyboard shortcuts
+        </h3>
+        <ul className="guide-shortcuts-list">
+          <li>
+            <kbd>&#8984;K</kbd> / <kbd>Ctrl K</kbd>
+            <span>Open Create dialog</span>
+          </li>
+          <li>
+            <kbd>&#8984;Z</kbd> / <kbd>Ctrl Z</kbd>
+            <span>Undo last action</span>
+          </li>
+          <li>
+            <kbd>Alt &#8594;</kbd> / <kbd>Alt &#8592;</kbd>
+            <span>Move focused card to next / previous column</span>
+          </li>
+          <li>
+            <kbd>Enter</kbd> / <kbd>Space</kbd>
+            <span>Open focused card</span>
+          </li>
+        </ul>
+      </section>
     </article>
   )
 }

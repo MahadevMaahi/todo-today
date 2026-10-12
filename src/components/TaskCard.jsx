@@ -21,6 +21,10 @@ export default function TaskCard({
   const priorityLabel = PRIORITY_LABELS[task.priority] ?? task.priority
   const statusLabel = STATUS_LABELS[task.status] ?? task.status
 
+  const statusIdx = STATUSES.indexOf(task.status)
+  const prevStatus = statusIdx > 0 ? STATUSES[statusIdx - 1] : null
+  const nextStatus = statusIdx < STATUSES.length - 1 ? STATUSES[statusIdx + 1] : null
+
   const meta = []
   if (parent) meta.push(`Parent: ${parent.ticketNumber}`)
   if (childCount > 0) {
@@ -31,10 +35,32 @@ export default function TaskCard({
     meta.push(`${linkCount} link${linkCount === 1 ? '' : 's'}`)
   }
 
+  function handleKeyDown(e) {
+    // Alt+Arrow: move card to adjacent column.
+    if (e.altKey) {
+      if (e.key === 'ArrowRight' && nextStatus) {
+        e.preventDefault()
+        onMove(task.id, nextStatus)
+        return
+      }
+      if (e.key === 'ArrowLeft' && prevStatus) {
+        e.preventDefault()
+        onMove(task.id, prevStatus)
+        return
+      }
+    }
+    // Enter or Space: open detail dialog.
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onOpen(task.id)
+    }
+  }
+
   return (
     <article
       className="task-card"
       data-priority={task.priority}
+      tabIndex={0}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData('text/plain', task.id)
@@ -42,11 +68,14 @@ export default function TaskCard({
         onDragStart?.(task.id)
       }}
       onDragEnd={() => onDragEnd?.()}
+      onKeyDown={handleKeyDown}
       aria-label={`${task.ticketNumber} ${task.title}, ${priorityLabel}, ${statusLabel}`}
+      aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
     >
       <button
         type="button"
         className="task-card-main"
+        tabIndex={-1}
         onClick={() => onOpen(task.id)}
       >
         <span className="task-card-heading">
@@ -63,23 +92,39 @@ export default function TaskCard({
         </span>
       </button>
 
-      <label className="task-card-move">
-        <select
-          value={task.status}
-          aria-label={`Move ${task.title} to`}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => {
-            e.stopPropagation()
-            onMove(task.id, e.target.value)
-          }}
-        >
-          {STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {STATUS_LABELS[status]}
-            </option>
-          ))}
-        </select>
-      </label>
+      {/* Hover arrow buttons replace the old inline select. */}
+      <div className="task-card-actions">
+        {prevStatus ? (
+          <button
+            type="button"
+            className="task-card-move-btn"
+            tabIndex={-1}
+            aria-label={`Move to ${STATUS_LABELS[prevStatus]}`}
+            title={`Move to ${STATUS_LABELS[prevStatus]}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onMove(task.id, prevStatus)
+            }}
+          >
+            &#8592;
+          </button>
+        ) : null}
+        {nextStatus ? (
+          <button
+            type="button"
+            className="task-card-move-btn"
+            tabIndex={-1}
+            aria-label={`Move to ${STATUS_LABELS[nextStatus]}`}
+            title={`Move to ${STATUS_LABELS[nextStatus]}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              onMove(task.id, nextStatus)
+            }}
+          >
+            &#8594;
+          </button>
+        ) : null}
+      </div>
     </article>
   )
 }

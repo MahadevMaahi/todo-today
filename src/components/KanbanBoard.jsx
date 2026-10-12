@@ -1,9 +1,13 @@
 import { useRef, useState } from 'react'
 import KanbanColumn from './KanbanColumn'
-import { STATUSES, groupByStatus } from '../todos/model'
+import { STATUSES, groupByStatus, sortByPriority } from '../todos/model'
 
 export default function KanbanBoard({ tasks, onOpenTask, onMove, onAddTask }) {
-  const groups = groupByStatus(tasks)
+  const rawGroups = groupByStatus(tasks)
+  // Sort each column by priority (P0 first) before rendering.
+  const groups = Object.fromEntries(
+    STATUSES.map((s) => [s, sortByPriority(rawGroups[s])]),
+  )
   const draggedIdRef = useRef(null)
   const [dropStatus, setDropStatus] = useState(null)
 

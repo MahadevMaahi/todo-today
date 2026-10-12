@@ -11,6 +11,7 @@ import {
   normalizeImported,
   setLinks,
   setParent,
+  sortByPriority,
   updateTask,
   wouldCreateCycle,
 } from './model.js'
@@ -411,5 +412,34 @@ describe('storage', () => {
       },
     }
     expect(saveTasks([task({ id: 'a' })], storage)).toEqual({ ok: false })
+  })
+})
+
+describe('sortByPriority', () => {
+  it('sorts P0 before P1, P2, P3', () => {
+    const tasks = [
+      task({ id: 'a', priority: 'p3' }),
+      task({ id: 'b', priority: 'p1' }),
+      task({ id: 'c', priority: 'p0' }),
+      task({ id: 'd', priority: 'p2' }),
+    ]
+    const sorted = sortByPriority(tasks)
+    expect(sorted.map((t) => t.priority)).toEqual(['p0', 'p1', 'p2', 'p3'])
+  })
+
+  it('does not mutate the input array', () => {
+    const tasks = [task({ id: 'a', priority: 'p3' }), task({ id: 'b', priority: 'p0' })]
+    const original = [...tasks]
+    sortByPriority(tasks)
+    expect(tasks).toEqual(original)
+  })
+
+  it('preserves relative order of same-priority tasks', () => {
+    const tasks = [
+      task({ id: 'a', priority: 'p1' }),
+      task({ id: 'b', priority: 'p1' }),
+    ]
+    const sorted = sortByPriority(tasks)
+    expect(sorted.map((t) => t.id)).toEqual(['a', 'b'])
   })
 })
