@@ -1325,3 +1325,22 @@
 .guide-shortcuts-list span {
   color: var(--text-muted);
 }
+
+/* —— Pointer-drag ghost element (Phase 4) —— */
+.task-card-ghost {
+  opacity: 0.88;
+  transform: scale(1.03) rotate(1deg);
+  box-shadow: var(--shadow-elevated) !important;
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* Prevent browser scroll interception during pointer drag on touch devices. */
+.task-card {
+  touch-action: none;
+}
+
+/* Prevent text selection across the board while dragging. */
+.kanban-board {
+  user-select: none;
+}
