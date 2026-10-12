@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import KanbanColumn from './KanbanColumn'
 import { STATUSES, groupByStatus } from '../todos/model'
 
-export default function KanbanBoard({ tasks, onOpenTask, onMove }) {
+export default function KanbanBoard({ tasks, onOpenTask, onMove, onAddTask }) {
   const groups = groupByStatus(tasks)
   const draggedIdRef = useRef(null)
   const [dropStatus, setDropStatus] = useState(null)
@@ -35,6 +35,7 @@ export default function KanbanBoard({ tasks, onOpenTask, onMove }) {
           isDropTarget={dropStatus === status}
           onOpenTask={onOpenTask}
           onMove={onMove}
+          onAddTask={onAddTask}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragOverColumn={setDropStatus}

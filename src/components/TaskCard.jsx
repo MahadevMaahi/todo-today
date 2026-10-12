@@ -34,6 +34,7 @@ export default function TaskCard({
   return (
     <article
       className="task-card"
+      data-priority={task.priority}
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData('text/plain', task.id)
