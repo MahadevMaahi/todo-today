@@ -6,6 +6,7 @@ import DaySprintGuide from './components/DaySprintGuide'
 import Dialog from './components/Dialog'
 import KanbanBoard from './components/KanbanBoard'
 import SiteFooter from './components/SiteFooter'
+import SprintProgress from './components/SprintProgress'
 import TaskDetailDialog from './components/TaskDetailDialog'
 import Toast from './components/Toast'
 import { nextTicketNumber } from './todos/model'
@@ -13,10 +14,11 @@ import { useTodos } from './todos/useTodos'
 import { applyTheme } from './theme'
 
 const GUIDE_VISIBLE_KEY = 'todo-today.guideVisible'
+const THEME_MODE_KEY = 'todo-today.themeMode'
 
 function readGuideVisible() {
   try {
-    const stored = sessionStorage.getItem(GUIDE_VISIBLE_KEY)
+    const stored = localStorage.getItem(GUIDE_VISIBLE_KEY)
     if (stored === null) return true
     return stored === '1'
   } catch {
@@ -26,7 +28,23 @@ function readGuideVisible() {
 
 function writeGuideVisible(visible) {
   try {
-    sessionStorage.setItem(GUIDE_VISIBLE_KEY, visible ? '1' : '0')
+    localStorage.setItem(GUIDE_VISIBLE_KEY, visible ? '1' : '0')
+  } catch {
+    // Ignore quota / private-mode failures.
+  }
+}
+
+function readThemeMode() {
+  try {
+    return localStorage.getItem(THEME_MODE_KEY) ?? 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+function writeThemeMode(mode) {
+  try {
+    localStorage.setItem(THEME_MODE_KEY, mode)
   } catch {
     // Ignore quota / private-mode failures.
   }
@@ -40,11 +58,11 @@ function moveFailureMessage(result) {
   }
   if (result.reason === 'task-not-found') return 'That task is no longer available.'
   if (result.reason === 'status-invalid') return 'That status is not valid.'
-  return 'Couldn’t move that task.'
+  return "Couldn't move that task."
 }
 
 export default function App() {
-  const [themeMode, setThemeMode] = useState('system')
+  const [themeMode, setThemeMode] = useState(readThemeMode)
   const [toast, setToast] = useState(null)
   const [dialog, setDialog] = useState(null)
   const [createTicket, setCreateTicket] = useState(null)
@@ -55,6 +73,11 @@ export default function App() {
   function setGuideOpen(visible) {
     setGuideVisible(visible)
     writeGuideVisible(visible)
+  }
+
+  function handleThemeChange(mode) {
+    setThemeMode(mode)
+    writeThemeMode(mode)
   }
 
   const {
@@ -84,6 +107,19 @@ export default function App() {
     showToast(storageError, 'error')
     clearStorageError()
   }, [storageError, clearStorageError])
+
+  // Cmd+K / Ctrl+K global shortcut to open Create dialog.
+  useEffect(() => {
+    function onKeyDown(e) {
+      const mod = e.metaKey || e.ctrlKey
+      if (mod && e.key === 'k' && !dialog && !createTicket && !selectedId) {
+        e.preventDefault()
+        setCreateTicket(nextTicketNumber(todos))
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [dialog, createTicket, selectedId, todos])
 
   const selectedTask = selectedId
     ? todos.find((t) => t.id === selectedId) ?? null
@@ -129,7 +165,7 @@ export default function App() {
           <div className="app-column-body">
             <AppNav
               themeMode={themeMode}
-              onThemeChange={setThemeMode}
+              onThemeChange={handleThemeChange}
               onCreate={() => setCreateTicket(nextTicketNumber(todos))}
               guideVisible={guideVisible}
               onShowGuide={() => setGuideOpen(true)}
@@ -137,15 +173,18 @@ export default function App() {
                 setDialog({
                   type: 'about',
                   title: 'About TODO BOARD',
-                  body: 'A Kanban board for today’s work. Tasks are kept in this browser tab so a refresh keeps your board. Closing the tab clears the session for a clean start next time. Open-source and free to use under the MIT License.',
+                  body: "A Kanban board for today's work. Tasks are kept in this browser tab so a refresh keeps your board. Closing the tab clears the session for a clean start next time. Open-source and free to use under the MIT License.",
                 })
               }
             />
+
+            <SprintProgress tasks={todos} />
 
             <KanbanBoard
               tasks={todos}
               onOpenTask={setSelectedId}
               onMove={handleMove}
+              onAddTask={() => setCreateTicket(nextTicketNumber(todos))}
             />
 
             {guideVisible ? (

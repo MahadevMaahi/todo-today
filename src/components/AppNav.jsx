@@ -93,6 +93,7 @@ export default function AppNav({
           onClick={onCreate}
         >
           Create
+          <kbd className="kbd-hint">⌘K</kbd>
         </button>
       </div>
     </header>
